@@ -2,11 +2,16 @@
 
 from multiprocessing import Manager, Process, set_start_method
 
-import numpy as np
 import roma
 import torch
 import tqdm
 from torch_fourier_slice import extract_central_slices_rfft_3d
+
+from tt2dtm.backend.post_processing import aggregate_distributed_results, scale_mip
+from tt2dtm.backend.statistic_updates import (
+    do_update_best_statistics,
+    normalize_template_projection,
+)
 
 COMPILE_BACKEND = "inductor"
 DEFAULT_STATISTIC_DTYPE = torch.float32
@@ -85,289 +90,6 @@ def construct_multi_gpu_match_template_kwargs(
     return kwargs_per_device
 
 
-######################################################
-### Helper functions called at the end of the loop ###
-######################################################
-
-
-def aggregate_distributed_results(
-    results: list[dict[str, torch.Tensor | np.ndarray]],
-) -> dict[str, torch.Tensor]:
-    """Combine the 2DTM results from multiple devices.
-
-    NOTE: This assumes that all tensors have been passed back to the CPU and are in
-    the form of numpy arrays.
-
-    Parameters
-    ----------
-    results : list[dict[str, np.ndarray]]
-        List of dictionaries containing the results from each device. Each dictionary
-        contains the following keys:
-            - "mip": Maximum intensity projection of the cross-correlation values.
-            - "best_phi": Best phi angle for each pixel.
-            - "best_theta": Best theta angle for each pixel.
-            - "best_psi": Best psi angle for each pixel.
-            - "best_defocus": Best defocus value for each pixel.
-            - "correlation_sum": Sum of cross-correlation values for each pixel.
-            - "correlation_squared_sum": Sum of squared cross-correlation values for
-              each pixel.
-            - "total_projections": Total number of projections calculated.
-    """
-    # Ensure all the tensors are passed back to CPU as numpy arrays
-    # Not sure why cannot sync across devices, but this is a workaround
-    results = [
-        {
-            key: value.cpu().numpy() if isinstance(value, torch.Tensor) else value
-            for key, value in result.items()
-        }
-        for result in results
-    ]
-
-    mips = np.stack([result["mip"] for result in results], axis=0)
-    best_phi = np.stack([result["best_phi"] for result in results], axis=0)
-    best_theta = np.stack([result["best_theta"] for result in results], axis=0)
-    best_psi = np.stack([result["best_psi"] for result in results], axis=0)
-    best_defocus = np.stack([result["best_defocus"] for result in results], axis=0)
-
-    mip_max = mips.max(axis=0)
-    mip_argmax = mips.argmax(axis=0)
-
-    best_phi = np.take_along_axis(best_phi, mip_argmax[None, ...], axis=0)
-    best_theta = np.take_along_axis(best_theta, mip_argmax[None, ...], axis=0)
-    best_psi = np.take_along_axis(best_psi, mip_argmax[None, ...], axis=0)
-    best_defocus = np.take_along_axis(best_defocus, mip_argmax[None, ...], axis=0)
-
-    # Sum the sums and squared sums of the cross-correlation values
-    correlation_sum = np.stack(
-        [result["correlation_sum"] for result in results], axis=0
-    ).sum(axis=0)
-    correlation_squared_sum = np.stack(
-        [result["correlation_squared_sum"] for result in results], axis=0
-    ).sum(axis=0)
-
-    # NOTE: Currently only tracking total number of projections for statistics,
-    # but could be future case where number of projections calculated on each
-    # device is necessary for some statistical computation.
-    total_projections = sum(result["total_projections"] for result in results)
-
-    # Cast back to torch tensors on the CPU
-    mip_max = torch.from_numpy(mip_max)
-    best_phi = torch.from_numpy(best_phi)
-    best_theta = torch.from_numpy(best_theta)
-    best_psi = torch.from_numpy(best_psi)
-    best_defocus = torch.from_numpy(best_defocus)
-    correlation_sum = torch.from_numpy(correlation_sum)
-    correlation_squared_sum = torch.from_numpy(correlation_squared_sum)
-
-    return {
-        "mip": mip_max,
-        "best_phi": best_phi,
-        "best_theta": best_theta,
-        "best_psi": best_psi,
-        "best_defocus": best_defocus,
-        "correlation_sum": correlation_sum,
-        "correlation_squared_sum": correlation_squared_sum,
-        "total_projections": total_projections,
-    }
-
-
-def scale_mip(
-    mip: torch.Tensor,
-    mip_scaled: torch.Tensor,
-    correlation_sum: torch.Tensor,
-    correlation_squared_sum: torch.Tensor,
-    total_correlation_positions: int,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Scale the MIP to Z-score map by the mean and variance of the correlation values.
-
-    Z-score is accounting for the variation in image intensity and spurious correlations
-    by subtracting the mean and dividing by the standard deviation pixel-wise. Since
-    cross-correlation values are roughly normally distributed for pure noise, Z-score
-    effectively becomes a measure of how unexpected (highly correlated to the reference
-    template) a region is in the image. Note that we are looking at maxima of millions
-    of Gaussian distributions, so Z-score has to be compared with a generalized extreme
-    value distribution (GEV) to determine significance (done elsewhere).
-
-    Parameters
-    ----------
-    mip : torch.Tensor
-        MIP of the correlation values.
-    mip_scaled : torch.Tensor
-        Scaled MIP of the correlation values.
-    correlation_sum : torch.Tensor
-        Sum of the correlation values.
-    correlation_squared_sum : torch.Tensor
-        Sum of the squared correlation values.
-    total_correlation_positions : int
-        Total number cross-correlograms calculated.
-
-    Returns
-    -------
-    tuple[torch.Tensor, torch.Tensor]
-        Tuple containing the MIP and scaled MIP
-    """
-    num_pixels = torch.tensor(mip.shape[0] * mip.shape[1])
-
-    # Convert sum and squared sum to mean and variance in-place
-    correlation_sum = correlation_sum / total_correlation_positions
-    correlation_squared_sum = correlation_squared_sum / total_correlation_positions
-    correlation_squared_sum -= correlation_sum**2
-    correlation_squared_sum = torch.sqrt(torch.clamp(correlation_squared_sum, min=0))
-
-    # Calculate normalized MIP
-    mip_scaled = mip - correlation_sum
-    torch.where(
-        correlation_squared_sum != 0,  # preventing zero division error, albeit unlikely
-        mip_scaled / correlation_squared_sum,
-        torch.zeros_like(mip_scaled),
-        out=mip_scaled,
-    )
-
-    mip = mip * (num_pixels**0.5)
-
-    return mip, mip_scaled
-
-
-###########################################################################
-### Helper functions called during the loop (passed into torch.compile) ###
-###########################################################################
-
-
-def normalize_template_projection(
-    projections: torch.Tensor,  # shape (batch, h, w)
-    small_shape: tuple[int, int],  # (h, w)
-    large_shape: tuple[int, int],  # (H, W)
-) -> torch.Tensor:
-    """Subtract mean of edge values and set variance to 1 (in large shape).
-
-    This function uses the fact that variance of a sequence, Var(X), is scaled by the
-    relative size of the small (unpadded) and large (padded with zeros) space. Some
-    negligible error is introduced into the variance (~1e-4) due to this routine.
-
-    Parameters
-    ----------
-    projections : torch.Tensor
-        Real-space projections of the template (in small space).
-    small_shape : tuple[int, int]
-        Shape of the template.
-    large_shape : tuple[int, int]
-        Shape of the image (in large space).
-
-    Returns
-    -------
-    torch.Tensor
-        Edge-mean subtracted projections, still in small space, but normalized
-        so variance of zero-padded projection is 1.
-    """
-    # Constants related to scaling the variance
-    npix_padded = large_shape[0] * large_shape[1] - small_shape[0] * small_shape[1]
-    relative_size = small_shape[0] * small_shape[1] / (large_shape[0] * large_shape[1])
-
-    # Extract edges while preserving batch dimensions
-    top_edge = projections[..., 0, :]  # shape: (..., W)
-    bottom_edge = projections[..., -1, :]  # shape: (..., W)
-    left_edge = projections[..., 1:-1, 0]  # shape: (..., H-2)
-    right_edge = projections[..., 1:-1, -1]  # shape: (..., H-2)
-    edge_pixels = torch.concatenate(
-        [top_edge, bottom_edge, left_edge, right_edge], dim=-1
-    )
-
-    # Subtract the edge pixel mean and calculate variance of small, unpadded projection
-    edge_mean = edge_pixels.mean(dim=-1)
-    projections -= edge_mean[..., None, None]
-
-    # # Calculate variance like cisTEM (does not match desired results...)
-    # variance = (projections**2).sum(dim=(-1, -2), keepdim=True) * relative_size - (
-    #     projections.mean(dim=(-1, -2), keepdim=True) * relative_size
-    # ) ** 2
-
-    # Fast calculation of mean/var using Torch + appropriate scaling.
-    # Scale the variance such that the larger padded space has variance of 1.
-    variance, mean = torch.var_mean(projections, dim=(-1, -2), keepdim=True)
-    mean += relative_size
-    variance *= relative_size
-    variance += (1 / npix_padded) * mean**2
-
-    return projections / torch.sqrt(variance)
-
-
-def do_iteration_statistics_updates(
-    cross_correlation: torch.Tensor,
-    euler_angles: torch.Tensor,
-    defocus_values: torch.Tensor,
-    mip: torch.Tensor,
-    best_phi: torch.Tensor,
-    best_theta: torch.Tensor,
-    best_psi: torch.Tensor,
-    best_defocus: torch.Tensor,
-    correlation_sum: torch.Tensor,
-    correlation_squared_sum: torch.Tensor,
-    H: int,
-    W: int,
-) -> None:
-    """Helper function for updating maxima and tracked statistics.
-
-    NOTE: The batch dimensions are effectively unraveled since taking the
-    maximum over a single batch dimensions is much faster than
-    multi-dimensional maxima.
-
-    NOTE: Updating the maxima was found to be fastest and least memory
-    impactful when using torch.where directly. Other methods tested were
-    boolean masking and torch.where with tuples of tensor indexes.
-
-    Parameters
-    ----------
-    cross_correlation : torch.Tensor
-        Cross-correlation values for the current iteration. Has either shape
-        (batch, H, W) or (defocus, orientations, H, W).
-    euler_angles : torch.Tensor
-        Euler angles for the current iteration. Has shape (orientations, 3).
-    defocus_values : torch.Tensor
-        Defocus values for the current iteration. Has shape (defocus,).
-    mip : torch.Tensor
-        Maximum intensity projection of the cross-correlation values.
-    best_phi : torch.Tensor
-        Best phi angle for each pixel.
-    best_theta : torch.Tensor
-        Best theta angle for each pixel.
-    best_psi : torch.Tensor
-        Best psi angle for each pixel.
-    best_defocus : torch.Tensor
-        Best defocus value for each pixel.
-    correlation_sum : torch.Tensor
-        Sum of cross-correlation values for each pixel.
-    correlation_squared_sum : torch.Tensor
-        Sum of squared cross-correlation values for each pixel.
-    H : int
-        Height of the cross-correlation values.
-    W : int
-        Width of the cross-correlation values.
-    """
-    max_values, max_indices = torch.max(cross_correlation.view(-1, H, W), dim=0)
-    max_defocus_idx = max_indices // euler_angles.shape[0]
-    max_orientation_idx = max_indices % euler_angles.shape[0]
-
-    # using torch.where directly
-    update_mask = max_values > mip
-
-    torch.where(update_mask, max_values, mip, out=mip)
-    torch.where(
-        update_mask, euler_angles[max_orientation_idx, 0], best_phi, out=best_phi
-    )
-    torch.where(
-        update_mask, euler_angles[max_orientation_idx, 1], best_theta, out=best_theta
-    )
-    torch.where(
-        update_mask, euler_angles[max_orientation_idx, 2], best_psi, out=best_psi
-    )
-    torch.where(
-        update_mask, defocus_values[max_defocus_idx], best_defocus, out=best_defocus
-    )
-
-    correlation_sum += cross_correlation.view(-1, H, W).sum(dim=0)
-    correlation_squared_sum += (cross_correlation.view(-1, H, W) ** 2).sum(dim=0)
-
-
 #################################
 ### Compiled helper functions ###
 #################################
@@ -375,8 +97,8 @@ def do_iteration_statistics_updates(
 normalize_template_projection_compiled = torch.compile(
     normalize_template_projection, backend=COMPILE_BACKEND
 )
-do_iteration_statistics_updates_compiled = torch.compile(
-    do_iteration_statistics_updates, backend=COMPILE_BACKEND
+do_update_best_statistics_compiled = torch.compile(
+    do_update_best_statistics, backend=COMPILE_BACKEND
 )
 
 
@@ -686,7 +408,7 @@ def _core_match_template_single_gpu(
         cross_correlation = torch.fft.irfftn(projections_dft, dim=(-2, -1))
 
         # Update the tracked statistics through compiled function
-        do_iteration_statistics_updates_compiled(
+        do_update_best_statistics_compiled(
             cross_correlation,
             euler_angles_batch,
             defocus_values,
