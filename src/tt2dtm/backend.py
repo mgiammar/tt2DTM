@@ -9,7 +9,8 @@ import tqdm
 from torch_fourier_slice import extract_central_slices_rfft_3d
 
 COMPILE_BACKEND = "inductor"
-DEFAULT_STATISTIC_DTYPE = torch.float32
+DEFAULT_STATISTIC_DTYPE = torch.float16
+DO_VALID_CROP = True
 
 # Turn off gradient calculations by default
 torch.set_grad_enabled(False)
@@ -588,32 +589,36 @@ def _core_match_template_single_gpu(
     ### Initialize the tracked output statistics ###
     ################################################
 
+    if DO_VALID_CROP:
+        statistic_shape = (H - h + 1, W - w + 1)
+    else:
+        statistic_shape = (H, W)
     mip = torch.full(
-        size=(H, W),
+        size=statistic_shape,
         fill_value=-float("inf"),
         dtype=DEFAULT_STATISTIC_DTYPE,
         device=device,
     )
     best_phi = torch.full(
-        size=(H, W),
+        size=statistic_shape,
         fill_value=-1000.0,
         dtype=DEFAULT_STATISTIC_DTYPE,
         device=device,
     )
     best_theta = torch.full(
-        size=(H, W),
+        size=statistic_shape,
         fill_value=-1000.0,
         dtype=DEFAULT_STATISTIC_DTYPE,
         device=device,
     )
     best_psi = torch.full(
-        size=(H, W),
+        size=statistic_shape,
         fill_value=-1000.0,
         dtype=DEFAULT_STATISTIC_DTYPE,
         device=device,
     )
     best_defocus = torch.full(
-        size=(H, W),
+        size=statistic_shape,
         fill_value=float("inf"),
         dtype=DEFAULT_STATISTIC_DTYPE,
         device=device,
@@ -684,6 +689,13 @@ def _core_match_template_single_gpu(
         ### Cross correlation step by element-wise multiplication ###
         projections_dft = image_dft[None, None, ...] * projections_dft.conj()
         cross_correlation = torch.fft.irfftn(projections_dft, dim=(-2, -1))
+        cross_correlation = cross_correlation.to(DEFAULT_STATISTIC_DTYPE)
+
+        # Crop the cross-correlation to the valid region
+        if DO_VALID_CROP:
+            cross_correlation = cross_correlation[
+                : statistic_shape[0], : statistic_shape[1]
+            ]
 
         # Update the tracked statistics through compiled function
         do_iteration_statistics_updates_compiled(
@@ -697,8 +709,8 @@ def _core_match_template_single_gpu(
             best_defocus,
             correlation_sum,
             correlation_squared_sum,
-            H,
-            W,
+            statistic_shape[0],
+            statistic_shape[1],
         )
 
     # NOTE: Need to send all tensors back to the CPU as numpy arrays for the shared
