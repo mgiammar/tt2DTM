@@ -70,6 +70,7 @@ def construct_multi_gpu_match_template_kwargs(
         euler_angles_device = euler_angles_device.to(device)
         projective_filters_device = projective_filters.to(device)
         defocus_values_device = defocus_values.to(device)
+        defocus_values_device = defocus_values_device.to(DEFAULT_STATISTIC_DTYPE)
 
         # Construct the kwargs dictionary
         kwargs = {
@@ -379,6 +380,7 @@ normalize_template_projection_compiled = torch.compile(
 do_iteration_statistics_updates_compiled = torch.compile(
     do_iteration_statistics_updates, backend=COMPILE_BACKEND
 )
+# do_iteration_statistics_updates_compiled = do_iteration_statistics_updates
 
 
 ###########################################################
@@ -596,7 +598,7 @@ def _core_match_template_single_gpu(
     mip = torch.full(
         size=statistic_shape,
         fill_value=-float("inf"),
-        dtype=DEFAULT_STATISTIC_DTYPE,
+        dtype=torch.float32,
         device=device,
     )
     best_phi = torch.full(
@@ -624,10 +626,10 @@ def _core_match_template_single_gpu(
         device=device,
     )
     correlation_sum = torch.zeros(
-        size=(H, W), dtype=DEFAULT_STATISTIC_DTYPE, device=device
+        size=statistic_shape, dtype=torch.float32, device=device
     )
     correlation_squared_sum = torch.zeros(
-        size=(H, W), dtype=DEFAULT_STATISTIC_DTYPE, device=device
+        size=statistic_shape, dtype=torch.float32, device=device
     )
 
     ########################################################
@@ -657,6 +659,7 @@ def _core_match_template_single_gpu(
         rot_matrix = roma.euler_to_rotmat(
             "zyz", euler_angles_batch, degrees=True, device=device
         )
+        euler_angles_batch = euler_angles_batch.to(DEFAULT_STATISTIC_DTYPE)
 
         # Extract central slice(s) from the template volume
         fourier_slice = extract_central_slices_rfft_3d(
@@ -693,9 +696,11 @@ def _core_match_template_single_gpu(
 
         # Crop the cross-correlation to the valid region
         if DO_VALID_CROP:
-            cross_correlation = cross_correlation[
-                : statistic_shape[0], : statistic_shape[1]
-            ]
+            cross_correlation = torch.as_strided(
+                cross_correlation,
+                size=cross_correlation.shape[:-2] + statistic_shape,
+                stride=cross_correlation.stride(),
+            )
 
         # Update the tracked statistics through compiled function
         do_iteration_statistics_updates_compiled(
