@@ -42,7 +42,6 @@ class DefocusSearchConfig(BaseModel2DTM):
         if not self.enabled:
             return [0.0]
 
-        """Gets a list of defocus values to search over."""
         vals = np.arange(
             self.defocus_min,
             self.defocus_max + self.defocus_step,

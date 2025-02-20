@@ -36,7 +36,6 @@ def normalize_template_projection(
                 \mu(X))^2 + (H-h)(W-w)\mu(X)^2
         \end{align}
 
-
     Parameters
     ----------
     projections : torch.Tensor

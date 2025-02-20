@@ -203,6 +203,38 @@ class MatchTemplateResult(BaseModel2DTM):
     ### Functional (data processing) methods ###
     ############################################
 
+    def apply_valid_cropping(self, template_shape: tuple[int, int]) -> None:
+        """Applies valid mode cropping to the stored tensors in-place.
+
+        Valid mode cropping ensures that positions correspond to where no overlapping
+        occurs between the template and edges of the image (i.e. the template fully
+        tiles the image in the cross-correlograms). For an image of shape (H, W) and
+        template shape of (h, w), this corresponds to cropping out the region
+        (H - h + 1, W - w + 1).
+
+        Parameters
+        ----------
+        template_shape : tuple[int, int]
+            Shape of the template used in the match_template run.
+
+        Returns
+        -------
+        None
+        """
+        # Assuming all statistic files have the same shape (which should be true!)
+        H, W = self.mip.shape
+        h, w = template_shape
+        slice_obj = (slice(H - h + 1), slice(W - w + 1))
+
+        self.mip = self.mip[slice_obj]
+        self.scaled_mip = self.scaled_mip[slice_obj]
+        self.correlation_average = self.correlation_average[slice_obj]
+        self.correlation_variance = self.correlation_variance[slice_obj]
+        self.orientation_psi = self.orientation_psi[slice_obj]
+        self.orientation_theta = self.orientation_theta[slice_obj]
+        self.orientation_phi = self.orientation_phi[slice_obj]
+        self.relative_defocus = self.relative_defocus[slice_obj]
+
     def load_tensors_from_paths(self) -> None:
         """Use the held paths to load tensors into memory.
 

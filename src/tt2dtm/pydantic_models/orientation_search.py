@@ -86,3 +86,43 @@ class OrientationSearchConfig(BaseModel2DTM):
             phi_max=self.phi_max,
             base_grid_method=self.base_grid_method,
         )
+
+
+class RefineOrientationConfig(BaseModel2DTM):
+    """Serialization and validation of orientation refinement parameters.
+
+    Angles will be sampled from [-coarse_step, coarse_step] in increments of
+    'fine_step' for the orientation refinement search.
+
+    Attributes
+    ----------
+    orientation_sampling_method : str
+        Method for sampling orientations. Default is 'Hopf Fibration'.
+        Currently only 'Hopf Fibration' is supported.
+    template_symmetry : str
+        Symmetry group of the template. Default is 'C1'.
+        Currently only 'C1' is supported.
+    in_plane_angular_step_coarse : float
+        Angular step size for in-plane rotations in degrees for previous, coarse search.
+        This corresponds to the 'OrientationSearchConfig.in_plane_angular_step' value
+        for the match template program. Must be greater than or equal to 0.
+    in_plane_angular_step_fine : float
+        Angular step size for in-plane rotations in degrees for current, fine search.
+        Must be greater than or equal to 0.
+    out_of_plane_angular_step_coarse : float
+        Angular step size for out-of-plane rotations in degrees for previous, coarse
+        search. This corresponds to the
+        'OrientationSearchConfig.out_of_plane_angular_step' value for the match template
+        program. Must be greater than or equal to 0.
+    out_of_plane_angular_step_fine : float
+        Angular step size for out-of-plane rotations in degrees for current, fine
+        search. Must be greater than or equal to 0.
+
+    """
+
+    orientation_sampling_method: str = "Hopf Fibration"
+    template_symmetry: str = "C1"
+    in_plane_angular_step_coarse: Annotated[float, Field(..., ge=0.0)] = 1.5
+    in_plane_angular_step_fine: Annotated[float, Field(..., ge=0.0)] = 0.1
+    out_of_plane_angular_step_coarse: Annotated[float, Field(..., ge=0.0)] = 2.5
+    out_of_plane_angular_step_fine: Annotated[float, Field(..., ge=0.0)] = 0.1

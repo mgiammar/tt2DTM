@@ -117,6 +117,8 @@ def _get_cropped_image_regions_numpy(
             mode=padding_mode,
             constant_values=padding_value,
         )
+        pos_y = pos_y + bs0
+        pos_x = pos_x + bs1
 
     cropped_images = np.stack(
         [image[y : y + box_size[0], x : x + box_size[1]] for y, x in zip(pos_y, pos_x)]
@@ -148,6 +150,8 @@ def _get_cropped_image_regions_torch(
             mode=padding_mode,
             value=padding_value,
         )
+        pos_y = pos_y + bs0
+        pos_x = pos_x + bs1
 
     cropped_images = torch.stack(
         [image[y : y + box_size[0], x : x + box_size[1]] for y, x in zip(pos_y, pos_x)]
