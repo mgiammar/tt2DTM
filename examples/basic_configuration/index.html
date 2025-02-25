@@ -9,12 +9,12 @@
       
       
       
-        <link rel="prev" href="../..">
+        <link rel="prev" href="../../data_formats/">
       
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.5">
     
     
       
@@ -207,6 +207,27 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../../data_formats/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Data Formats
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -219,10 +240,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -234,8 +255,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_2">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Examples
           </label>
@@ -1332,9 +1353,9 @@ Below we import all the configuration classes (along with other libraries) we wi
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">from</span> <span class="nn">pprint</span> <span class="kn">import</span> <span class="n">pprint</span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pprint</span><span class="w"> </span><span class="kn">import</span> <span class="n">pprint</span>
 
-<span class="kn">from</span> <span class="nn">tt2dtm.pydantic_models</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tt2dtm.pydantic_models</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">ArbitraryCurveFilterConfig</span><span class="p">,</span>
     <span class="n">BandpassFilterConfig</span><span class="p">,</span>
     <span class="n">ComputationalConfig</span><span class="p">,</span>
@@ -1386,7 +1407,7 @@ We follow the fields that are defined in <a href="https://relion.readthedocs.io/
 <li><code>phase_shift</code>: Additional phase shift to apply across the CTF, in degrees, with the default value of 0.0.</li>
 <li><code>defocus_u</code>: Defocus of the micrograph along the major axis, in Angstroms.</li>
 <li><code>defocus_v</code>: Defocus of the micrograph along the minor axis, in Angstroms.</li>
-<li><code>defocus_astigmatism_angle</code>: Angle of the defocus astigmatism (relative to the x-axis), in degrees. The default value is 0.0.</li>
+<li><code>astigmatism_angle</code>: Angle of the defocus astigmatism (relative to the x-axis), in degrees. The default value is 0.0.</li>
 <li><code>ctf_B_factor</code>: An additional b-factor to apply to the CTF, in Angstroms^2. The default value is 0.0.</li>
 </ul>
 <p>There are other unused fields in the class that are not detailed here.
@@ -1433,7 +1454,7 @@ See the Pydantic model API documentation for more information.</p>
     <span class="n">phase_shift</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>  <span class="c1"># default value</span>
     <span class="n">defocus_u</span><span class="o">=</span><span class="mf">5200.0</span><span class="p">,</span>
     <span class="n">defocus_v</span><span class="o">=</span><span class="mf">4950.0</span><span class="p">,</span>
-    <span class="n">defocus_astigmatism_angle</span><span class="o">=</span><span class="mf">25.0</span><span class="p">,</span>
+    <span class="n">astigmatism_angle</span><span class="o">=</span><span class="mf">25.0</span><span class="p">,</span>
     <span class="n">ctf_B_factor</span><span class="o">=</span><span class="mf">60.0</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
@@ -1446,7 +1467,7 @@ See the Pydantic model API documentation for more information.</p>
     phase_shift=0.0,  # default value
     defocus_u=5200.0,
     defocus_v=4950.0,
-    defocus_astigmatism_angle=25.0,
+    astigmatism_angle=25.0,
     ctf_B_factor=60.0,
 )</div>
 </div>
@@ -1494,7 +1515,7 @@ Uncomment the following code block to see this in action.</p>
 <span class="c1">#     phase_shift=0.0,  # default value</span>
 <span class="c1">#     defocus_u=5200.0,</span>
 <span class="c1">#     defocus_v=4950.0,</span>
-<span class="c1">#     defocus_astigmatism_angle=25.0,</span>
+<span class="c1">#     astigmatism_angle=25.0,</span>
 <span class="c1"># )</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-3"># bad_optics_group = OpticsGroup(
@@ -1504,7 +1525,7 @@ Uncomment the following code block to see this in action.</p>
 #     phase_shift=0.0,  # default value
 #     defocus_u=5200.0,
 #     defocus_v=4950.0,
-#     defocus_astigmatism_angle=25.0,
+#     astigmatism_angle=25.0,
 # )</div>
 </div>
 </div>
@@ -1560,11 +1581,11 @@ pprint(optics_dict)</div>
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
 <pre>{'amplitude_contrast_ratio': 0.07,
+ 'astigmatism_angle': 25.0,
  'beam_tilt_x': None,
  'beam_tilt_y': None,
  'chromatic_aberration': 0.0,
  'ctf_B_factor': 60.0,
- 'defocus_astigmatism_angle': 25.0,
  'defocus_u': 5200.0,
  'defocus_v': 4950.0,
  'even_zernike': None,
@@ -1641,7 +1662,7 @@ my_optics_group.to_yaml(yaml_filepath)</div>
 <span class="nt">beam_tilt_y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 <span class="nt">chromatic_aberration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span>
 <span class="nt">ctf_B_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60.0</span>
-<span class="nt">defocus_astigmatism_angle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">25.0</span>
+<span class="nt">astigmatism_angle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">25.0</span>
 <span class="nt">defocus_u</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5200.0</span>
 <span class="nt">defocus_v</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4950.0</span>
 <span class="nt">even_zernike</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
@@ -2015,8 +2036,8 @@ When applied the image, the power spectral density should become flat and the no
 <p>The bandpass filter is <em>disabled</em> by default and has the following attributes:</p>
 <ul>
 <li><code>enabled</code>: A boolean value indicating whether the bandpass filter is enabled.</li>
-<li><code>low_pass</code>: The low-pass cutoff frequency (in terms of Nyquist) for the bandpass filter.</li>
-<li><code>high_pass</code>: The high-pass cutoff frequency (in terms of Nyquist) for the bandpass filter.</li>
+<li><code>low_freq_cutoff</code>: The low-pass cutoff frequency (in terms of Nyquist) for the bandpass filter.</li>
+<li><code>high_freq_cutoff</code>: The high-pass cutoff frequency (in terms of Nyquist) for the bandpass filter.</li>
 <li><code>falloff</code>: The falloff factor (using a cosine function) for the bandpass filter. A value of <code>0.0</code> (default) corresponds to a hard cutoff with values in the range <code>(0.0, 0.1)</code> providing a smooth, but distinct, transition.</li>
 </ul>
 <p>When disabled, the bandpass filter is not applied to the input image.
@@ -2535,7 +2556,7 @@ Note that a default YAML configuration can also be found in the GitHub page.</p>
 <span class="w">  </span><span class="nt">beam_tilt_y</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 <span class="w">  </span><span class="nt">chromatic_aberration</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0</span>
 <span class="w">  </span><span class="nt">ctf_B_factor</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">60.0</span>
-<span class="w">  </span><span class="nt">defocus_astigmatism_angle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">25.0</span>
+<span class="w">  </span><span class="nt">astigmatism_angle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">25.0</span>
 <span class="w">  </span><span class="nt">defocus_u</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5200.0</span>
 <span class="w">  </span><span class="nt">defocus_v</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">4950.0</span>
 <span class="w">  </span><span class="nt">even_zernike</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
@@ -2566,8 +2587,8 @@ Note that a default YAML configuration can also be found in the GitHub page.</p>
 <span class="w">  </span><span class="nt">bandpass_filter</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
 <span class="w">    </span><span class="nt">falloff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-<span class="w">    </span><span class="nt">high_pass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
-<span class="w">    </span><span class="nt">low_pass</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="w">    </span><span class="nt">high_freq_cutoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class="w">    </span><span class="nt">low_freq_cutoff</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 <span class="w">  </span><span class="nt">phase_randomization_filter</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">cuton</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
 <span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>

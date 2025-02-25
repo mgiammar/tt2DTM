@@ -1,0 +1,873 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../examples/basic_configuration/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.5">
+    
+    
+      
+        <title>Data Formats - Py2DTM -- Two-Dimensional Template Matching in Python</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.8608ea7d.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#description-of-data-formats" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Py2DTM -- Two-Dimensional Template Matching in Python" class="md-header__button md-logo" aria-label="Py2DTM -- Two-Dimensional Template Matching in Python" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Py2DTM -- Two-Dimensional Template Matching in Python
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Data Formats
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Py2DTM -- Two-Dimensional Template Matching in Python" class="md-nav__button md-logo" aria-label="Py2DTM -- Two-Dimensional Template Matching in Python" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Py2DTM -- Two-Dimensional Template Matching in Python
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Data Formats
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Data Formats
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#data-from-the-match-template-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data from the match template program
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data from the match template program">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#best-statistic-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best statistic maps
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best statistic maps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-note-on-correlation-modes-and-output-shapes" class="md-nav__link">
+    <span class="md-ellipsis">
+      A note on correlation modes and output shapes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#match-template-dataframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      Match template DataFrame
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-from-the-refine-template-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data from the refine template program
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data from the refine template program">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#refine-template-dataframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      Refine template DataFrame
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Examples
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Examples
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/basic_configuration/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Template Matching Configurations
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#data-from-the-match-template-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data from the match template program
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data from the match template program">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#best-statistic-maps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Best statistic maps
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Best statistic maps">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-note-on-correlation-modes-and-output-shapes" class="md-nav__link">
+    <span class="md-ellipsis">
+      A note on correlation modes and output shapes
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#match-template-dataframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      Match template DataFrame
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-from-the-refine-template-program" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data from the refine template program
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data from the refine template program">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#refine-template-dataframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      Refine template DataFrame
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="description-of-data-formats">Description of Data Formats</h1>
+<p>To increase interoperability between external packages, we herein describe the different data formats used as input to and export from programs.
+Orientations on a per-particle bases are currently stored as <a href="https://en.wikipedia.org/wiki/Euler_angles#">Euler angles</a> in ZYZ format.
+Note that the package is still under development and the exact way the data is represented might change in the future.</p>
+<h2 id="data-from-the-match-template-program">Data from the match template program</h2>
+<p>The match template program collates statistics from a large number of cross-correlograms taken over an orientation and defocus search space.
+See the API on the <code>MatchTemplateResult</code> object for further information on how these data are stored, but here we provide an overview of what files get written to disk.</p>
+<h3 id="best-statistic-maps">Best statistic maps</h3>
+<p>Each of the "best" statistics is stored on a per-position basis in what we dub "statistics maps" saved as <code>.mrc</code> files.
+We have the following tracked statistics for each valid (x, y) position:</p>
+<ul>
+<li>Maximum Intensity Projection (MIP): Maximum cross-correlation value over all search orientations and relative defocus values.</li>
+<li>Scaled MIP (z-score or SNR): The MIP value normalized by the mean and variance of the cross-correlation over the entire search space.</li>
+<li>Correlation Mean: The mean of the cross-correlation values over the entire search space. Used to calculate the scaled MIP.</li>
+<li>Correlation Variance: The variance of the cross-correlation values over the entire search space. Used to calculate the scaled MIP.</li>
+<li>Phi: The <script type="math/tex"> \phi </script> angle which (in degrees) produced the MIP value.</li>
+<li>Theta: The <script type="math/tex"> \theta </script> angle (in degrees) which produced the MIP value.</li>
+<li>Psi: The <script type="math/tex"> \psi </script> angle (in degrees) which produced the MIP value.</li>
+<li>Defocus: The relative defocus value (in Angstroms) which produced the MIP value.</li>
+</ul>
+<h4 id="a-note-on-correlation-modes-and-output-shapes">A note on correlation modes and output shapes</h4>
+<p>Three general modes for convolution/correlation exist in digital signal processing: "full", "same", and "valid".
+<a href="https://brianmcfee.net/dstbook-site/content/ch03-convolution/Modes.html">This chapter of Digital Signals Theory</a> provides a good overview of these modes.</p>
+<p>We support both the "same" and "valid" modes for cross-correlation.
+For an image with shape <script type="math/tex"> (H, W) </script> and template <script type="math/tex"> (h, w) </script>, the modes will output statistics maps with the following shapes:</p>
+<ul>
+<li>same: <script type="math/tex"> (H, W) </script>
+</li>
+<li>valid: <script type="math/tex"> (H - h + 1, W - w + 1) </script>
+</li>
+</ul>
+<p>Note that same mode pads the image with zeros along the edges and <em>does not</em> increase the number of particles detectable; values along the padded portions of the edge do not hold significance in the context of the particle detection.
+In each case, the position in the map at <script type="math/tex"> (i, j) </script> corresponds to the top-left corner of the template at that position, <em>not</em> the center of the template.
+Below is an example comparing the two correlation modes:</p>
+<p><svg height="2236" overflow="hidden" width="2758" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g transform="translate(18 9)"><g><rect fill="#FFFFFF" fill-opacity="1" height="2225" width="2722" x="0" y="0"/><rect fill="#F2F2F2" fill-opacity="1" height="660" stroke="#000000" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="13.75" width="660" x="573" y="250"/><rect fill="#C2F1C8" fill-opacity="1" height="247" stroke="#4EA72E" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="13.75" width="248" x="585" y="261"/><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 373.715 606)" unicode-bidi="normal" writing-mode="lr-tb">H</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 865.861 92)" unicode-bidi="normal" writing-mode="lr-tb">W</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 685.937 588)" unicode-bidi="normal" writing-mode="lr-tb">h</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 865.861 412)" unicode-bidi="normal" writing-mode="lr-tb">w</text><path d="M544.5 910.5C516.609 910.5 494 906.732 494 902.084L494 588.916C494 584.268 471.391 580.5 443.5 580.5 471.391 580.5 494 576.732 494 572.084L494 258.916C494 254.268 516.61 250.5 544.501 250.5" fill="none" fill-rule="evenodd" stroke="#156082" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="6.875"/><path d="M573.5 221.501C573.5 193.61 577.268 171 581.916 171L895.084 171.001C899.732 171.001 903.5 148.391 903.5 120.5 903.5 148.391 907.268 171.001 911.916 171.001L1225.08 171.001C1229.73 171.001 1233.5 193.611 1233.5 221.501" fill="none" fill-rule="evenodd" stroke="#156082" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="6.875"/><path d="M1290.5 610.063 1828.88 610.063 1828.88 616.938 1290.5 616.938ZM1824.3 599.75 1851.8 613.5 1824.3 627.25Z" fill="#156082" fill-opacity="1" fill-rule="nonzero"/><rect fill="#83CBEB" fill-opacity="1" height="412" stroke="#156082" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="13.75" width="412" x="1942" y="407"/><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 2022.38 366)" unicode-bidi="normal" writing-mode="lr-tb">W</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 2094.64 366)" unicode-bidi="normal" writing-mode="lr-tb">-</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 2122.71 366)" unicode-bidi="normal" writing-mode="lr-tb">w+1</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 2387.24 639)" unicode-bidi="normal" writing-mode="lr-tb">H</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 2445.68 639)" unicode-bidi="normal" writing-mode="lr-tb">-</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 2473.75 639)" unicode-bidi="normal" writing-mode="lr-tb">h+1</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 1479.87 572)" unicode-bidi="normal" writing-mode="lr-tb">valid</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 786.327 794)" unicode-bidi="normal" writing-mode="lr-tb">image</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 35.091 410)" unicode-bidi="normal" writing-mode="lr-tb">template</text><path d="M393 378.844 559.137 378.844 559.137 389.157 393 389.156ZM553.981 368.532 584.919 384 553.981 399.469Z" fill="#4EA72E" fill-opacity="1" fill-rule="nonzero"/><rect fill="#A6A6A6" fill-opacity="1" height="908" stroke="#000000" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="13.75" width="908" x="573" y="1306"/><rect fill="#F2F2F2" fill-opacity="1" height="660" stroke="#000000" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="13.75" width="660" x="573" y="1306"/><rect fill="#C2F1C8" fill-opacity="1" height="247" stroke="#4EA72E" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="13.75" width="248" x="585" y="1317"/><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 217.509 1786)" unicode-bidi="normal" writing-mode="lr-tb">H+h</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 365.322 1786)" unicode-bidi="normal" writing-mode="lr-tb">-</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 387.184 1786)" unicode-bidi="normal" writing-mode="lr-tb">1</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 904.007 1146)" unicode-bidi="normal" writing-mode="lr-tb">W+w</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 1081.04 1146)" unicode-bidi="normal" writing-mode="lr-tb">-</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 1102.9 1146)" unicode-bidi="normal" writing-mode="lr-tb">1</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 686 1644)" unicode-bidi="normal" writing-mode="lr-tb">h</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 865.923 1468)" unicode-bidi="normal" writing-mode="lr-tb">w</text><path d="M544.5 2214.5C516.609 2214.5 493.999 2210.73 493.999 2206.08L494 1768.92C494 1764.27 471.391 1760.5 443.5 1760.5 471.391 1760.5 494 1756.73 494 1752.08L494 1314.92C494 1310.27 516.61 1306.5 544.501 1306.5" fill="none" fill-rule="evenodd" stroke="#156082" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="6.875"/><path d="M573.5 1277.5C573.5 1249.61 577.268 1227 581.916 1227L1019.08 1227C1023.73 1227 1027.5 1204.39 1027.5 1176.5 1027.5 1204.39 1031.27 1227 1035.92 1227L1473.08 1227C1477.73 1227 1481.5 1249.61 1481.5 1277.5" fill="none" fill-rule="evenodd" stroke="#156082" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="6.875"/><path d="M1565.5 1771.06 1822.91 1771.06 1822.91 1777.94 1565.5 1777.94ZM1818.33 1760.75 1845.83 1774.5 1818.33 1788.25Z" fill="#156082" fill-opacity="1" fill-rule="nonzero"/><rect fill="#83CBEB" fill-opacity="1" height="660" stroke="#156082" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="13.75" width="660" x="1937" y="1507"/><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 2229.18 1466)" unicode-bidi="normal" writing-mode="lr-tb">W</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 2629.53 1863)" unicode-bidi="normal" writing-mode="lr-tb">H</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 1603.95 1733)" unicode-bidi="normal" writing-mode="lr-tb">same</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 797.064 2116)" unicode-bidi="normal" writing-mode="lr-tb">zero padding</text><rect fill="none" height="413" stroke="#000000" stroke-dasharray="18.3333 13.75" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" stroke-width="4.58333" width="413" x="1952.5" y="1523.5"/><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 793.332 1851)" unicode-bidi="normal" writing-mode="lr-tb">image</text><text direction="ltr" fill="#000000" fill-opacity="1" font-family="Aptos,Aptos_MSFontService,sans-serif" font-size="83" font-stretch="normal" font-style="normal" font-variant="normal" font-weight="400" text-anchor="start" text-decoration="none" transform="matrix(1 0 0 1 33 1466)" unicode-bidi="normal" writing-mode="lr-tb">template</text><path d="M391.035 1435.84 557.173 1436.96 557.103 1447.27 390.965 1446.16ZM552.086 1426.61 582.918 1442.29 551.878 1457.55Z" fill="#4EA72E" fill-opacity="1" fill-rule="nonzero"/></g></g></svg></p>
+<h3 id="match-template-dataframe">Match template <strong>DataFrame</strong></h3>
+<p>Since not all positions <script type="math/tex"> (x, y) </script> contain a particle from the match template search, using only the statistics maps can be inefficient in terms of size and speed.
+The match template manager class has the method <code>MatchTemplateManager.results_to_dataframe()</code> which automatically picks peaks within the scaled MIP map and stores the peak locations, orientations, and defocus values in a pandas DataFrame.</p>
+<p>Additional columns besides locations and orientations are included in the DataFrame to increase the utility of the data, namely the construction of <code>ParticleStack</code> objects.
+The columns and corresponding descriptions are as follows:</p>
+<table>
+<thead>
+<tr>
+<th>Column Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mip</code></td>
+<td>float</td>
+<td>Maximum cross-correlation value over all search orientations and relative defocus values.</td>
+</tr>
+<tr>
+<td><code>scaled_mip</code></td>
+<td>float</td>
+<td>Scaled MIP value (z-score) normalized by cross-correlation mean and variance.</td>
+</tr>
+<tr>
+<td><code>correlation_mean</code></td>
+<td>float</td>
+<td>Mean of the cross-correlation values over the entire search space.</td>
+</tr>
+<tr>
+<td><code>correlation_variance</code></td>
+<td>float</td>
+<td>Variance of the cross-correlation values over the entire search space.</td>
+</tr>
+<tr>
+<td><code>total_correlations</code></td>
+<td>int</td>
+<td>Total number of cross-correlations taken over the search space (defoci times orientations).</td>
+</tr>
+<tr>
+<td><code>pos_x</code></td>
+<td>int</td>
+<td>Particle x position (units of pixels) in the statistics maps. Corresponds to the top-left corner of the template.</td>
+</tr>
+<tr>
+<td><code>pos_y</code></td>
+<td>int</td>
+<td>Particle y position (units of pixels) in the statistics maps. Corresponds to the top-left corner of the template.</td>
+</tr>
+<tr>
+<td><code>pos_x_img</code></td>
+<td>int</td>
+<td>Center of of the particle (x position, units of pixels) in the micrograph.</td>
+</tr>
+<tr>
+<td><code>pos_y_img</code></td>
+<td>int</td>
+<td>Center of of the particle (y position, units of pixels) in the micrograph.</td>
+</tr>
+<tr>
+<td><code>pos_x_img_angstrom</code></td>
+<td>float</td>
+<td>Center of the particle (x position, in Angstroms) in the micrograph.</td>
+</tr>
+<tr>
+<td><code>pos_y_img_angstrom</code></td>
+<td>float</td>
+<td>Center of the particle (y position, in Angstroms) in the micrograph.</td>
+</tr>
+<tr>
+<td><code>psi</code></td>
+<td>float</td>
+<td>The <script type="math/tex"> \psi </script> angle (in degrees) which produced the MIP value.</td>
+</tr>
+<tr>
+<td><code>theta</code></td>
+<td>float</td>
+<td>The <script type="math/tex"> \theta </script> angle (in degrees) which produced the MIP value.</td>
+</tr>
+<tr>
+<td><code>phi</code></td>
+<td>float</td>
+<td>The <script type="math/tex"> \phi </script> angle which (in degrees) produced the MIP value.</td>
+</tr>
+<tr>
+<td><code>relative_defocus</code></td>
+<td>float</td>
+<td>The relative defocus value (in Angstroms) which produced the MIP value. Relative to <code>defocus_u</code> and <code>defocus_v</code>.</td>
+</tr>
+<tr>
+<td><code>defocus_u</code></td>
+<td>float</td>
+<td>Defocus value along the major axis for the <strong>micrograph</strong> (in Angstroms).</td>
+</tr>
+<tr>
+<td><code>defocus_v</code></td>
+<td>float</td>
+<td>Defocus value along the minor axis for the <strong>micrograph</strong> (in Angstroms).</td>
+</tr>
+<tr>
+<td><code>astigmatism_angle</code></td>
+<td>float</td>
+<td>Angle of the astigmatism (in degrees) for defocus.</td>
+</tr>
+<tr>
+<td><code>pixel_size</code></td>
+<td>float</td>
+<td>Pixel size of the micrograph (in Angstroms).</td>
+</tr>
+<tr>
+<td><code>voltage</code></td>
+<td>float</td>
+<td>Voltage of the microscope (in kV).</td>
+</tr>
+<tr>
+<td><code>spherical_aberration</code></td>
+<td>float</td>
+<td>Spherical aberration of the microscope (in mm).</td>
+</tr>
+<tr>
+<td><code>amplitude_contrast_ratio</code></td>
+<td>float</td>
+<td>Amplitude contrast ratio of the microscope.</td>
+</tr>
+<tr>
+<td><code>phase_shift</code></td>
+<td>float</td>
+<td>Phase shift of the microscope (in degrees).</td>
+</tr>
+<tr>
+<td><code>ctf_B_factor</code></td>
+<td>float</td>
+<td>B-factor of the CTF, in Angstroms^2.</td>
+</tr>
+<tr>
+<td><code>micrograph_path</code></td>
+<td>str</td>
+<td>Path to the original micrograph.</td>
+</tr>
+<tr>
+<td><code>template_path</code></td>
+<td>str</td>
+<td>Path to the template used for the search.</td>
+</tr>
+<tr>
+<td><code>mip_path</code></td>
+<td>str</td>
+<td>Path to the saved MIP map.</td>
+</tr>
+<tr>
+<td><code>scaled_mip_path</code></td>
+<td>str</td>
+<td>Path to the saved scaled MIP map.</td>
+</tr>
+<tr>
+<td><code>psi_path</code></td>
+<td>str</td>
+<td>Path to the saved psi map.</td>
+</tr>
+<tr>
+<td><code>theta_path</code></td>
+<td>str</td>
+<td>Path to the saved theta map.</td>
+</tr>
+<tr>
+<td><code>phi_path</code></td>
+<td>str</td>
+<td>Path to the saved phi map.</td>
+</tr>
+<tr>
+<td><code>defocus_path</code></td>
+<td>str</td>
+<td>Path to the saved defocus map.</td>
+</tr>
+<tr>
+<td><code>correlation_average_path</code></td>
+<td>str</td>
+<td>Path to the saved correlation mean map.</td>
+</tr>
+<tr>
+<td><code>correlation_variance_path</code></td>
+<td>str</td>
+<td>Path to the saved correlation variance map.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="data-from-the-refine-template-program">Data from the refine template program</h2>
+<p>The refine template program takes in a set of particles and refined their orientations and relative defocus values.</p>
+<h3 id="refine-template-dataframe">Refine template <strong>DataFrame</strong></h3>
+<p>The program outputs another DataFrame with additional columns for the refined orientations, defocus values, and positions.
+New columns are listed below:</p>
+<table>
+<thead>
+<tr>
+<th>Column Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>refined_mip</code></td>
+<td>float</td>
+<td>New maximum cross-correlation over refinement search space.</td>
+</tr>
+<tr>
+<td><code>refined_scaled_mip</code></td>
+<td>float</td>
+<td>New scaled MIP value (z-score) normalized by cross-correlation mean and variance.</td>
+</tr>
+<tr>
+<td><code>refined_pos_x</code></td>
+<td>int</td>
+<td>The refined x position of the particle, top-left corner of the template.</td>
+</tr>
+<tr>
+<td><code>refined_pos_y</code></td>
+<td>int</td>
+<td>The refined y position of the particle, top-left corner of the template.</td>
+</tr>
+<tr>
+<td><code>refined_pos_x_img</code></td>
+<td>int</td>
+<td>The refined x position of the particle, center of the particle in the micrograph.</td>
+</tr>
+<tr>
+<td><code>refined_pos_y_img</code></td>
+<td>int</td>
+<td>The refined y position of the particle, center of the particle in the micrograph.</td>
+</tr>
+<tr>
+<td><code>refined_pos_x_img_angstrom</code></td>
+<td>float</td>
+<td>The refined x position of the particle, center of the particle in the micrograph (in Angstroms).</td>
+</tr>
+<tr>
+<td><code>refined_pos_y_img_angstrom</code></td>
+<td>float</td>
+<td>The refined y position of the particle, center of the particle in the micrograph (in Angstroms).</td>
+</tr>
+<tr>
+<td><code>refined_psi</code></td>
+<td>float</td>
+<td>The refined <script type="math/tex"> \psi </script> angle (in degrees).</td>
+</tr>
+<tr>
+<td><code>refined_theta</code></td>
+<td>float</td>
+<td>The refined <script type="math/tex"> \theta </script> angle (in degrees).</td>
+</tr>
+<tr>
+<td><code>refined_phi</code></td>
+<td>float</td>
+<td>The refined <script type="math/tex"> \phi </script> angle (in degrees).</td>
+</tr>
+<tr>
+<td><code>refined_relative_defocus</code></td>
+<td>float</td>
+<td>The refined relative defocus value (in Angstroms).</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f1b6f286.min.js"></script>
+      
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+      
+    
+  </body>
+</html>
