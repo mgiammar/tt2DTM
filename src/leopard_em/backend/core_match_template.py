@@ -9,15 +9,21 @@ from torch_fourier_slice import extract_central_slices_rfft_3d
 
 from leopard_em.backend.process_results import (
     aggregate_distributed_results,
+    calculate_survival_histogram,
     scale_mip,
 )
 from leopard_em.backend.utils import (
     do_iteration_statistics_updates,
     normalize_template_projection,
 )
+from leopard_em.constants import (
+    HISTOGRAM_NUM_POINTS,
+)
 
+# Constants
 COMPILE_BACKEND = "inductor"
 DEFAULT_STATISTIC_DTYPE = torch.float32
+
 
 # Turn off gradient calculations by default
 torch.set_grad_enabled(False)
@@ -99,6 +105,8 @@ def core_match_template(
             - "total_orientations": Total number of orientations searched.
             - "total_defocus": Total number of defocus values searched.
     """
+    H, W = image_dft.shape
+    W = 2 * (W - 1)
     ##############################################################
     ### Pre-multiply the whitening filter with the CTF filters ###
     ##############################################################
@@ -156,6 +164,7 @@ def core_match_template(
     correlation_sum = aggregated_results["correlation_sum"]
     correlation_squared_sum = aggregated_results["correlation_squared_sum"]
     total_projections = aggregated_results["total_projections"]
+    histogram_data = aggregated_results["histogram_data"]
 
     mip_scaled = torch.empty_like(mip)
     mip, mip_scaled, correlation_mean, correlation_variance = scale_mip(
@@ -164,6 +173,14 @@ def core_match_template(
         correlation_sum=correlation_sum,
         correlation_squared_sum=correlation_squared_sum,
         total_correlation_positions=total_projections,
+    )
+
+    survival_histogram, expected_survival_hist, temp_float = (
+        calculate_survival_histogram(
+            histogram_data=histogram_data,
+            num_pixels=H * W,
+            total_correlation_positions=total_projections,
+        )
     )
 
     return {
@@ -178,6 +195,10 @@ def core_match_template(
         "total_projections": total_projections,
         "total_orientations": euler_angles.shape[0],
         "total_defocus": defocus_values.shape[0],
+        "histogram_data": histogram_data,
+        "survival_histogram": survival_histogram,
+        "expected_survival_hist": expected_survival_hist,
+        "temp_float": temp_float,
     }
 
 
@@ -345,6 +366,8 @@ def _core_match_template_single_gpu(
         size=(H, W), dtype=DEFAULT_STATISTIC_DTYPE, device=device
     )
 
+    histogram_data = torch.zeros((HISTOGRAM_NUM_POINTS), device=device)
+
     ########################################################
     ### Setup iterator object with tqdm for progress bar ###
     ########################################################
@@ -392,6 +415,7 @@ def _core_match_template_single_gpu(
             best_defocus,
             correlation_sum,
             correlation_squared_sum,
+            histogram_data,
             H,
             W,
         )
@@ -407,6 +431,7 @@ def _core_match_template_single_gpu(
         "correlation_sum": correlation_sum.cpu().numpy(),
         "correlation_squared_sum": correlation_squared_sum.cpu().numpy(),
         "total_projections": total_projections,
+        "histogram_data": histogram_data.cpu().numpy(),
     }
 
     # Place the results in the shared multi-process manager dictionary so accessible

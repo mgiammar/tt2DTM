@@ -13,8 +13,16 @@ from leopard_em.analysis.pick_match_template_peaks import (
     match_template_peaks_to_dataframe,
     match_template_peaks_to_dict,
 )
+from leopard_em.constants import (
+    HISTOGRAM_NUM_POINTS,
+    HISTOGRAM_STEP,
+)
 from leopard_em.pydantic_models.types import BaseModel2DTM, ExcludedTensor
-from leopard_em.utils.data_io import load_mrc_image, write_mrc_from_tensor
+from leopard_em.utils.data_io import (
+    load_mrc_image,
+    write_mrc_from_tensor,
+    write_survival_histogram,
+)
 
 
 def check_file_path_and_permissions(path: str, allow_overwrite: bool) -> None:
@@ -101,6 +109,14 @@ class MatchTemplateResult(BaseModel2DTM):
     match_template_peaks : MatchTemplatePeaks
         Named tuple object containing the peak locations, heights, and pose statistics.
         See the 'analysis.pick_match_template_peaks' module for more information.
+    histogram_data : ExcludedTensor
+        Histogram data.
+    survival_histogram : ExcludedTensor
+        Survival histogram.
+    expected_survival_hist : ExcludedTensor
+        Expected survival histogram.
+    temp_float : float
+        Temporary float value.
 
     Methods
     -------
@@ -144,6 +160,7 @@ class MatchTemplateResult(BaseModel2DTM):
     orientation_theta_path: str
     orientation_phi_path: str
     relative_defocus_path: str
+    survival_histogram_path: str
 
     # Scalar (non-tensor) attributes
     total_projections: int = 0
@@ -161,6 +178,11 @@ class MatchTemplateResult(BaseModel2DTM):
     orientation_theta: ExcludedTensor
     orientation_phi: ExcludedTensor
     relative_defocus: ExcludedTensor
+
+    histogram_data: ExcludedTensor
+    survival_histogram: ExcludedTensor
+    expected_survival_hist: ExcludedTensor
+    temp_float: float
 
     ###########################
     ### Pydantic Validators ###
@@ -193,6 +215,7 @@ class MatchTemplateResult(BaseModel2DTM):
             self.orientation_theta_path,
             self.orientation_phi_path,
             self.relative_defocus_path,
+            self.survival_histogram_path,
         ]
         for path in paths:
             check_file_path_and_permissions(path, self.allow_file_overwrite)
@@ -337,3 +360,15 @@ class MatchTemplateResult(BaseModel2DTM):
                 mrc_header=None,
                 overwrite=self.allow_file_overwrite,
             )
+
+        # write survival histogram
+        write_survival_histogram(
+            hist_path=self.survival_histogram_path,
+            survival_histogram=self.survival_histogram,
+            expected_noise=self.temp_float,
+            histogram_data=self.histogram_data,
+            expected_survival_hist=self.expected_survival_hist,
+            temp_float=self.temp_float,
+            HISTOGRAM_STEP=HISTOGRAM_STEP,
+            HISTOGRAM_NUM_POINTS=HISTOGRAM_NUM_POINTS,
+        )

@@ -36,6 +36,7 @@ MATCH_TEMPLATE_DF_COLUMN_ORDER = [
     "defocus_path",
     "correlation_average_path",
     "correlation_variance_path",
+    "survival_histogram_path",
 ]
 
 REFINED_DF_COLUMN_ORDER = [

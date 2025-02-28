@@ -2,6 +2,12 @@
 
 import torch
 
+from leopard_em.constants import (
+    HISTOGRAM_MIN,
+    HISTOGRAM_NUM_POINTS,
+    HISTOGRAM_STEP,
+)
+
 
 def normalize_template_projection(
     projections: torch.Tensor,  # shape (batch, h, w)
@@ -97,6 +103,7 @@ def do_iteration_statistics_updates(
     best_defocus: torch.Tensor,
     correlation_sum: torch.Tensor,
     correlation_squared_sum: torch.Tensor,
+    histogram_data: torch.Tensor,
     H: int,
     W: int,
 ) -> None:
@@ -133,6 +140,8 @@ def do_iteration_statistics_updates(
         Sum of cross-correlation values for each pixel.
     correlation_squared_sum : torch.Tensor
         Sum of squared cross-correlation values for each pixel.
+    histogram_data : torch.Tensor
+        Histogram data for each pixel.
     H : int
         Height of the cross-correlation values.
     W : int
@@ -144,7 +153,6 @@ def do_iteration_statistics_updates(
 
     # using torch.where directly
     update_mask = max_values > mip
-
     torch.where(update_mask, max_values, mip, out=mip)
     torch.where(
         update_mask, euler_angles[max_orientation_idx, 0], best_phi, out=best_phi
@@ -161,3 +169,13 @@ def do_iteration_statistics_updates(
 
     correlation_sum += cross_correlation.view(-1, H, W).sum(dim=0)
     correlation_squared_sum += (cross_correlation.view(-1, H, W) ** 2).sum(dim=0)
+
+    # Update histogram data
+    bin_vals = (
+        (cross_correlation.view(-1, H, W) - HISTOGRAM_MIN) / HISTOGRAM_STEP
+    ).long()
+    # Clip values to valid histogram bins
+    bin_vals = torch.clamp(bin_vals, min=0, max=HISTOGRAM_NUM_POINTS - 1)
+    # Count occurrences of each bin index and update histogram_data
+    bin_counts = torch.bincount(bin_vals.flatten(), minlength=HISTOGRAM_NUM_POINTS)
+    histogram_data += bin_counts

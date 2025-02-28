@@ -273,6 +273,13 @@ class MatchTemplateManager(BaseModel2DTM):
         self.match_template_result.total_orientations = results["total_orientations"]
         self.match_template_result.total_defocus = results["total_defocus"]
 
+        self.match_template_result.histogram_data = results["histogram_data"]
+        self.match_template_result.survival_histogram = results["survival_histogram"]
+        self.match_template_result.expected_survival_hist = results[
+            "expected_survival_hist"
+        ]
+        self.match_template_result.temp_float = results["temp_float"]
+
         # Apply the valid cropping mode to the results
         if do_valid_cropping:
             nx = self.template_volume.shape[-1]
@@ -374,7 +381,9 @@ class MatchTemplateManager(BaseModel2DTM):
         df["correlation_variance_path"] = (
             self.match_template_result.correlation_variance_path
         )
-
+        df["survival_histogram_path"] = (
+            self.match_template_result.survival_histogram_path
+        )
         # Reorder columns
         df = df.reindex(columns=MATCH_TEMPLATE_DF_COLUMN_ORDER)
 

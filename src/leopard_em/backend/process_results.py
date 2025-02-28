@@ -3,6 +3,12 @@
 import numpy as np
 import torch
 
+from leopard_em.constants import (
+    HISTOGRAM_MIN,
+    HISTOGRAM_NUM_POINTS,
+    HISTOGRAM_STEP,
+)
+
 
 def aggregate_distributed_results(
     results: list[dict[str, torch.Tensor | np.ndarray]],
@@ -64,6 +70,10 @@ def aggregate_distributed_results(
     correlation_squared_sum = np.stack(
         [result["correlation_squared_sum"] for result in results], axis=0
     ).sum(axis=0)
+    # Sum histogram data
+    histogram_data = np.stack(
+        [result["histogram_data"] for result in results], axis=0
+    ).sum(axis=0)
 
     # NOTE: Currently only tracking total number of projections for statistics,
     # but could be future case where number of projections calculated on each
@@ -78,7 +88,7 @@ def aggregate_distributed_results(
     best_defocus = torch.from_numpy(best_defocus)
     correlation_sum = torch.from_numpy(correlation_sum)
     correlation_squared_sum = torch.from_numpy(correlation_squared_sum)
-
+    histogram_data = torch.from_numpy(histogram_data)
     return {
         "mip": mip_max,
         "best_phi": best_phi,
@@ -88,6 +98,7 @@ def aggregate_distributed_results(
         "correlation_sum": correlation_sum,
         "correlation_squared_sum": correlation_squared_sum,
         "total_projections": total_projections,
+        "histogram_data": histogram_data,
     }
 
 
@@ -177,3 +188,38 @@ def scale_mip(
     # correlation_squared_sum.copy_(corr_variance)
 
     return mip, mip_scaled, corr_mean, corr_variance
+
+
+def calculate_survival_histogram(
+    histogram_data: torch.Tensor,
+    num_pixels: int,
+    total_correlation_positions: int,
+) -> tuple[torch.Tensor, torch.Tensor, float]:
+    """Calculate the survival histogram and expected survival histogram.
+
+    Parameters
+    ----------
+    histogram_data : torch.Tensor
+        Histogram data.
+    num_pixels : int
+        Number of pixels in the image.
+    total_correlation_positions : int
+        Total number of correlation positions calculated.
+
+    Returns
+    -------
+    tuple[torch.Tensor, torch.Tensor, float]
+        Tuple containing the survival histogram, expected survival histogram, and
+        the starting position of the histogram.
+    """
+    temp_float = HISTOGRAM_MIN + (HISTOGRAM_STEP / 2.0)  # start pos
+    num_points = torch.arange(0, HISTOGRAM_NUM_POINTS)
+    expected_survival_hist = (
+        torch.erfc((temp_float + HISTOGRAM_STEP * num_points) / 2.0**0.5) / 2.0
+    ) * (num_pixels * total_correlation_positions)
+    # Calculate survival histogram (cumulative sum from right to left)
+    survival_histogram = torch.flip(
+        torch.cumsum(torch.flip(histogram_data, [0]), dim=0), [0]
+    )
+
+    return survival_histogram, expected_survival_hist, temp_float

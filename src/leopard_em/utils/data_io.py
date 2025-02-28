@@ -152,3 +152,46 @@ def load_mrc_volume(file_path: str | os.PathLike | Path) -> torch.Tensor:
         )
 
     return tensor
+
+
+def write_survival_histogram(
+    hist_path: str | os.PathLike | Path,
+    survival_histogram: torch.Tensor,
+    expected_noise: float,
+    histogram_data: torch.Tensor,
+    expected_survival_hist: torch.Tensor,
+    temp_float: float,
+    HISTOGRAM_STEP: float,
+    HISTOGRAM_NUM_POINTS: int,
+) -> None:
+    """Write survival histogram to file.
+
+    Parameters
+    ----------
+    hist_path : str | os.PathLike | Path
+        Path to the survival histogram file.
+    survival_histogram : torch.Tensor
+        Survival histogram.
+    expected_noise : float
+        Expected noise.
+    histogram_data : torch.Tensor
+        Histogram data.
+    expected_survival_hist : torch.Tensor
+        Expected survival histogram.
+    temp_float : float
+        Temporary float value.
+    HISTOGRAM_STEP : float
+        Histogram step size.
+    HISTOGRAM_NUM_POINTS : int
+        Number of histogram points.
+    """
+    with open(hist_path, "w") as f:
+        f.write(f"Expected threshold is {expected_noise}\n")
+        f.write("SNR, histogram, survival histogram, random survival histogram\n")
+        for i in range(HISTOGRAM_NUM_POINTS):
+            f.write(
+                f"{temp_float + HISTOGRAM_STEP * i}, "
+                f"{histogram_data[i]}, "
+                f"{survival_histogram[i]}, "
+                f"{expected_survival_hist[i]}\n"
+            )
