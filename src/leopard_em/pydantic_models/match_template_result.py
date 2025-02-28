@@ -182,7 +182,7 @@ class MatchTemplateResult(BaseModel2DTM):
     histogram_data: ExcludedTensor
     survival_histogram: ExcludedTensor
     expected_survival_hist: ExcludedTensor
-    temp_float: float
+    temp_float: float = 0.0
 
     ###########################
     ### Pydantic Validators ###
