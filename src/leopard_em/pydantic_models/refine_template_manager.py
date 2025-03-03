@@ -13,6 +13,7 @@ from leopard_em.pydantic_models.defocus_search import DefocusSearchConfig
 from leopard_em.pydantic_models.formats import REFINED_DF_COLUMN_ORDER
 from leopard_em.pydantic_models.orientation_search import RefineOrientationConfig
 from leopard_em.pydantic_models.particle_stack import ParticleStack
+from leopard_em.pydantic_models.pixel_size_search import PixelSizeSearchConfig
 from leopard_em.pydantic_models.types import BaseModel2DTM, ExcludedTensor
 from leopard_em.utils.data_io import load_mrc_volume
 
@@ -28,6 +29,8 @@ class RefineTemplateManager(BaseModel2DTM):
         Particle stack object containing particle data.
     defocus_refinement_config : DefocusSearchConfig
         Configuration for defocus refinement.
+    pixel_size_refinement_config : PixelSizeSearchConfig
+        Configuration for pixel size refinement.
     orientation_refinement_config : RefineOrientationConfig
         Configuration for orientation refinement.
     preprocessing_filters : PreprocessingFilters
@@ -53,6 +56,7 @@ class RefineTemplateManager(BaseModel2DTM):
     template_volume_path: str  # In df per-particle, but ensure only one reference
     particle_stack: ParticleStack
     defocus_refinement_config: DefocusSearchConfig
+    pixel_size_refinement_config: PixelSizeSearchConfig
     orientation_refinement_config: RefineOrientationConfig
     preprocessing_filters: PreprocessingFilters
     computational_config: ComputationalConfig
@@ -128,11 +132,28 @@ class RefineTemplateManager(BaseModel2DTM):
         template_dft = torch.fft.fftshift(template_dft, dim=(-3, -2))  # skip rfft dim
 
         # The set of "best" euler angles from match template search
+        # Check if refined angles exist, otherwise use the original angles
+        phi = (
+            self.particle_stack["refined_phi"]
+            if "refined_phi" in self.particle_stack._df.columns
+            else self.particle_stack["phi"]
+        )
+        theta = (
+            self.particle_stack["refined_theta"]
+            if "refined_theta" in self.particle_stack._df.columns
+            else self.particle_stack["theta"]
+        )
+        psi = (
+            self.particle_stack["refined_psi"]
+            if "refined_psi" in self.particle_stack._df.columns
+            else self.particle_stack["psi"]
+        )
+
         euler_angles = torch.stack(
             (
-                torch.tensor(self.particle_stack["phi"]),
-                torch.tensor(self.particle_stack["theta"]),
-                torch.tensor(self.particle_stack["psi"]),
+                torch.tensor(phi),
+                torch.tensor(theta),
+                torch.tensor(psi),
             ),
             dim=-1,
         )
@@ -148,25 +169,29 @@ class RefineTemplateManager(BaseModel2DTM):
         # The relative defocus values to search over
         defocus_offsets = self.defocus_refinement_config.defocus_values
 
+        # The relative pixel size values to search over
+        pixel_size_offsets = self.pixel_size_refinement_config.pixel_size_values
+
         # Keyword arguments for the CTF filter calculation call
         # NOTE: We currently enforce the parameters (other than the defocus values) are
         # all the same. This could be updated in the future...
         part_stk = self.particle_stack
-        assert part_stk["pixel_size"].nunique() == 1
         assert part_stk["voltage"].nunique() == 1
         assert part_stk["spherical_aberration"].nunique() == 1
         assert part_stk["amplitude_contrast_ratio"].nunique() == 1
         assert part_stk["phase_shift"].nunique() == 1
         assert part_stk["ctf_B_factor"].nunique() == 1
 
+        print(f"B factor: {part_stk['ctf_B_factor'][0].item()}")
+
         ctf_kwargs = {
             "voltage": part_stk["voltage"][0].item(),
             "spherical_aberration": part_stk["spherical_aberration"][0].item(),
-            "amplitude_contrast": part_stk["amplitude_contrast_ratio"][0].item(),
-            "b_factor": part_stk["ctf_B_factor"][0].item(),
+            "amplitude_contrast_ratio": part_stk["amplitude_contrast_ratio"][0].item(),
+            "ctf_B_factor": part_stk["ctf_B_factor"][0].item(),
             "phase_shift": part_stk["phase_shift"][0].item(),
-            "pixel_size": part_stk["pixel_size"][0].item(),
-            "image_shape": template_shape,
+            "pixel_size": part_stk["refined_pixel_size"].mean().item(),
+            "template_shape": template_shape,
             "rfft": True,
             "fftshift": False,
         }
@@ -180,6 +205,7 @@ class RefineTemplateManager(BaseModel2DTM):
             "defocus_v": defocus_v,
             "defocus_angle": defocus_angle,
             "defocus_offsets": defocus_offsets,
+            "pixel_size_offsets": pixel_size_offsets,
             "ctf_kwargs": ctf_kwargs,
             "projective_filters": projective_filters,
         }
@@ -198,12 +224,59 @@ class RefineTemplateManager(BaseModel2DTM):
         """
         backend_kwargs = self.make_backend_core_function_kwargs()
 
+        result = self.get_refine_result(backend_kwargs, orientation_batch_size)
+
+        self.refine_result_to_dataframe(
+            output_dataframe_path=output_dataframe_path, result=result
+        )
+
+    def get_refine_result(
+        self, backend_kwargs: dict, orientation_batch_size: int = 64
+    ) -> dict[str, np.ndarray]:
+        """Get refine template result.
+
+        Parameters
+        ----------
+        backend_kwargs : dict
+            Keyword arguments for the backend processing
+        orientation_batch_size : int
+            Number of orientations to process at once. Defaults to 64.
+
+        Returns
+        -------
+        dict[str, np.ndarray]
+            The result of the refine template program.
+        """
+        # Adjust batch size if orientation search is disabled
+        if not self.orientation_refinement_config.enabled:
+            orientation_batch_size = 1
+        elif (
+            self.orientation_refinement_config.euler_angles_offsets.shape[0]
+            < orientation_batch_size
+        ):
+            orientation_batch_size = (
+                self.orientation_refinement_config.euler_angles_offsets.shape[0]
+            )
+
+        result: dict[str, np.ndarray] = {}
         result = core_refine_template(
             batch_size=orientation_batch_size, **backend_kwargs
         )
         result = {k: v.cpu().numpy() for k, v in result.items()}
+        return result
 
-        # Copy dataframe from particle stack and add results
+    def refine_result_to_dataframe(
+        self, output_dataframe_path: str, result: dict[str, np.ndarray]
+    ) -> None:
+        """Convert refine template result to dataframe.
+
+        Parameters
+        ----------
+        output_dataframe_path : str
+            Path to save the refined particle data.
+        result : dict[str, np.ndarray]
+            The result of the refine template program.
+        """
         df_refined = self.particle_stack._df.copy()
         refined_mip = result["refined_cross_correlation"]
         refined_scaled_mip = refined_mip - df_refined["correlation_mean"]
@@ -219,11 +292,16 @@ class RefineTemplateManager(BaseModel2DTM):
         # Add the new columns to the DataFrame
         df_refined["refined_mip"] = refined_mip
         df_refined["refined_scaled_mip"] = refined_scaled_mip
-        df_refined["refined_psi"] = result["refined_euler_angles"][:, 0]
+
+        df_refined["refined_psi"] = result["refined_euler_angles"][:, 2]
         df_refined["refined_theta"] = result["refined_euler_angles"][:, 1]
-        df_refined["refined_phi"] = result["refined_euler_angles"][:, 2]
+        df_refined["refined_phi"] = result["refined_euler_angles"][:, 0]
+
         df_refined["refined_relative_defocus"] = (
-            result["refined_defocus_offset"] + df_refined["relative_defocus"]
+            result["refined_defocus_offset"] + df_refined["refined_relative_defocus"]
+        )
+        df_refined["refined_pixel_size"] = (
+            result["refined_pixel_size_offset"] + df_refined["pixel_size"]
         )
         df_refined["refined_pos_y"] = pos_offset_y + df_refined["pos_y"]
         df_refined["refined_pos_x"] = pos_offset_x + df_refined["pos_x"]
