@@ -39,7 +39,7 @@ ORIENTATION_BATCH_SIZE = 8
 def main():
     mt_manager = MatchTemplateManager.from_yaml(YAML_CONFIG_PATH)
     mt_manager.run_match_template(ORIENTATION_BATCH_SIZE)
-    df.results_to_dataframe()
+    df = mt_manager.results_to_dataframe()
     df.to_csv("/path/to/results.csv")
 
 # NOTE: invoking from `if __name__ == "__main__"` is necessary

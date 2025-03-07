@@ -21,7 +21,7 @@ optics_group:
   pixel_size: 1.06   # in Angstroms
   defocus_u: 5200.0  # in Angstroms
   defocus_v: 4950.0  # in Angstroms
-  defocus_astigmatism_angle: 25.0  # in degrees
+  astigmatism_angle: 25.0  # in degrees
   spherical_aberration: 2.7  # in millimeters
   amplitude_contrast_ratio: 0.07
   phase_shift: 0.0

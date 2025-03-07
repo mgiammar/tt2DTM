@@ -9,15 +9,21 @@ particle_stack:
   extracted_box_size: [528, 528]
   original_template_size: [512, 512]
 defocus_refinement_config:
+  enabled: true
   defocus_max:  100.0  # in Angstroms, relative to "best" defocus value in particle stack dataframe
   defocus_min: -100.0  # in Angstroms, relative to "best" defocus value in particle stack dataframe
   defocus_step: 20.0   # in Angstroms
-  enabled: true
 orientation_refinement_config:
+  enabled: true
   in_plane_angular_step_coarse:     1.5   # in degrees
   in_plane_angular_step_fine:       0.15  # in degrees
   out_of_plane_angular_step_coarse: 2.5   # in degrees
   out_of_plane_angular_step_fine:   0.25  # in degrees
+pixel_size_refinement_config:
+  enabled: false
+  pixel_size_min: -0.005
+  pixel_size_max: 0.005
+  pixel_size_step: 0.001
 preprocessing_filters:
   whitening_filter:
     do_power_spectrum: true

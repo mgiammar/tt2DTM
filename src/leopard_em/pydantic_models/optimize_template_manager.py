@@ -5,40 +5,33 @@ from typing import Any, ClassVar
 import numpy as np
 import torch
 from pydantic import ConfigDict
+from ttsim3d.models import Simulator
 
 from leopard_em.backend.core_refine_template import core_refine_template
 from leopard_em.pydantic_models.computational_config import ComputationalConfig
 from leopard_em.pydantic_models.correlation_filters import PreprocessingFilters
-from leopard_em.pydantic_models.defocus_search import DefocusSearchConfig
-from leopard_em.pydantic_models.formats import REFINED_DF_COLUMN_ORDER
-from leopard_em.pydantic_models.orientation_search import RefineOrientationConfig
 from leopard_em.pydantic_models.particle_stack import ParticleStack
 from leopard_em.pydantic_models.pixel_size_search import PixelSizeSearchConfig
 from leopard_em.pydantic_models.types import BaseModel2DTM, ExcludedTensor
-from leopard_em.utils.data_io import load_mrc_volume
 
 
-class RefineTemplateManager(BaseModel2DTM):
+class OptimizeTemplateManager(BaseModel2DTM):
     """Model holding parameters necessary for running the refine template program.
 
     Attributes
     ----------
-    template_volume_path : str
-        Path to the template volume MRC file.
     particle_stack : ParticleStack
         Particle stack object containing particle data.
-    defocus_refinement_config : DefocusSearchConfig
-        Configuration for defocus refinement.
-    pixel_size_refinement_config : PixelSizeSearchConfig
-        Configuration for pixel size refinement.
-    orientation_refinement_config : RefineOrientationConfig
-        Configuration for orientation refinement.
+    pixel_size_coarse_search : PixelSizeSearchConfig
+        Configuration for pixel size coarse search.
+    pixel_size_fine_search : PixelSizeSearchConfig
+        Configuration for pixel size fine search.
     preprocessing_filters : PreprocessingFilters
         Filters to apply to the particle images.
     computational_config : ComputationalConfig
         What computational resources to allocate for the program.
-    template_volume : ExcludedTensor
-        The template volume tensor (excluded from serialization).
+    simulator : Simulator
+        The simulator object.
 
     Methods
     -------
@@ -53,23 +46,18 @@ class RefineTemplateManager(BaseModel2DTM):
 
     model_config: ClassVar = ConfigDict(arbitrary_types_allowed=True)
 
-    template_volume_path: str  # In df per-particle, but ensure only one reference
     particle_stack: ParticleStack
-    defocus_refinement_config: DefocusSearchConfig
-    pixel_size_refinement_config: PixelSizeSearchConfig
-    orientation_refinement_config: RefineOrientationConfig
+    pixel_size_coarse_search: PixelSizeSearchConfig
+    pixel_size_fine_search: PixelSizeSearchConfig
     preprocessing_filters: PreprocessingFilters
     computational_config: ComputationalConfig
+    simulator: Simulator
 
     # Excluded tensors
     template_volume: ExcludedTensor
 
-    def __init__(self, skip_mrc_preloads: bool = False, **data: Any):
+    def __init__(self, **data: Any):
         super().__init__(**data)
-
-        # Load the data from the MRC files
-        if not skip_mrc_preloads:
-            self.template_volume = load_mrc_volume(self.template_volume_path)
 
     def make_backend_core_function_kwargs(self) -> dict[str, Any]:
         """Create the kwargs for the backend refine_template core function."""
@@ -78,12 +66,8 @@ class RefineTemplateManager(BaseModel2DTM):
             raise ValueError("Only single-device execution is currently supported.")
         device = device[0]
 
-        if self.template_volume is None:
-            self.template_volume = load_mrc_volume(self.template_volume_path)
-        if not isinstance(self.template_volume, torch.Tensor):
-            template = torch.from_numpy(self.template_volume)
-        else:
-            template = self.template_volume
+        # simulate template volume
+        template = self.simulator.run(gpu_ids=self.computational_config.gpu_ids)
 
         template_shape = template.shape[-2:]
 
@@ -159,7 +143,7 @@ class RefineTemplateManager(BaseModel2DTM):
         )
 
         # The relative Euler angle offsets to search over
-        euler_angle_offsets = self.orientation_refinement_config.euler_angles_offsets
+        euler_angle_offsets = torch.zeros((1, 3))
 
         # The best defocus values for each particle (+ astigmatism)
         defocus_u = self.particle_stack.absolute_defocus_u
@@ -167,10 +151,10 @@ class RefineTemplateManager(BaseModel2DTM):
         defocus_angle = torch.tensor(self.particle_stack["astigmatism_angle"])
 
         # The relative defocus values to search over
-        defocus_offsets = self.defocus_refinement_config.defocus_values
+        defocus_offsets = torch.tensor([0.0])
 
         # The relative pixel size values to search over
-        pixel_size_offsets = self.pixel_size_refinement_config.pixel_size_values
+        pixel_size_offsets = torch.tensor([0.0])
 
         # Keyword arguments for the CTF filter calculation call
         # NOTE: We currently enforce the parameters (other than the defocus values) are
@@ -208,30 +192,109 @@ class RefineTemplateManager(BaseModel2DTM):
             "projective_filters": projective_filters,
         }
 
-    def run_refine_template(
-        self, output_dataframe_path: str, orientation_batch_size: int = 64
-    ) -> None:
+    def run_optimize_template(self, output_text_path: str) -> None:
         """Run the refine template program and saves the resultant DataFrame to csv.
 
         Parameters
         ----------
-        output_dataframe_path : str
-            Path to save the refined particle data.
-        orientation_batch_size : int
-            Number of orientations to process at once. Defaults to 64.
+        output_text_path : str
+            Path to save the optimized template pixel size.
         """
+        if self.pixel_size_coarse_search.enabled:
+            optimal_template_px = self.optimize_pixel_size()
+            print(f"Optimal template px: {optimal_template_px:.3f} Å")
+            # print this to the text file
+            with open(output_text_path, "w") as f:
+                f.write(f"Optimal template px: {optimal_template_px:.3f} Å")
+
+    def optimize_pixel_size(self) -> float:
+        """Optimize the pixel size of the template volume.
+
+        Returns
+        -------
+        float
+            The optimal pixel size.
+        """
+        initial_template_px = self.simulator.pixel_spacing
+        print(f"Initial template px: {initial_template_px:.3f} Å")
+
+        best_snr = float("-inf")
+        best_px = float(initial_template_px)
+
+        print("Starting coarse search...")
+
+        pixel_size_offsets_coarse = self.pixel_size_coarse_search.pixel_size_values
+        coarse_px_values = pixel_size_offsets_coarse + initial_template_px
+
+        consecutive_decreases = 0
+        previous_snr = float("-inf")
+        for px in coarse_px_values:
+            snr = self.evaluate_template_px(px=px.item())
+            print(f"Pixel size: {px:.3f}, SNR: {snr:.3f}")
+            if snr > best_snr:
+                best_snr = snr
+                best_px = px.item()
+            if snr > previous_snr:
+                consecutive_decreases = 0
+            else:
+                consecutive_decreases += 1
+                if consecutive_decreases >= 2:
+                    print(
+                        "SNR decreased for two consecutive iterations. "
+                        "Stopping coarse px search."
+                    )
+                    break
+            previous_snr = snr
+
+        if self.pixel_size_fine_search.enabled:
+            pixel_size_offsets_fine = self.pixel_size_fine_search.pixel_size_values
+            fine_px_values = pixel_size_offsets_fine + best_px
+
+            consecutive_decreases = 0
+            previous_snr = float("-inf")
+            for px in fine_px_values:
+                snr = self.evaluate_template_px(px=px.item())
+                print(f"Pixel size: {px:.3f}, SNR: {snr:.3f}")
+                if snr > best_snr:
+                    best_snr = snr
+                    best_px = px.item()
+                if snr > previous_snr:
+                    consecutive_decreases = 0
+                else:
+                    consecutive_decreases += 1
+                    if consecutive_decreases >= 2:
+                        print(
+                            "SNR decreased for two consecutive iterations. "
+                            "Stopping fine px search."
+                        )
+                        break
+                previous_snr = snr
+
+        return best_px
+
+    def evaluate_template_px(self, px: float) -> float:
+        """Evaluate the template pixel size.
+
+        Parameters
+        ----------
+        px : float
+            The pixel size to evaluate.
+
+        Returns
+        -------
+        float
+            The mean SNR of the template.
+        """
+        self.simulator.pixel_spacing = px
         backend_kwargs = self.make_backend_core_function_kwargs()
+        result = self.get_correlation_result(backend_kwargs, 1)
+        mean_snr = self.results_to_snr(result)
+        return mean_snr
 
-        result = self.get_refine_result(backend_kwargs, orientation_batch_size)
-
-        self.refine_result_to_dataframe(
-            output_dataframe_path=output_dataframe_path, result=result
-        )
-
-    def get_refine_result(
-        self, backend_kwargs: dict, orientation_batch_size: int = 64
+    def get_correlation_result(
+        self, backend_kwargs: dict, orientation_batch_size: int = 1
     ) -> dict[str, np.ndarray]:
-        """Get refine template result.
+        """Get correlation result.
 
         Parameters
         ----------
@@ -245,17 +308,6 @@ class RefineTemplateManager(BaseModel2DTM):
         dict[str, np.ndarray]
             The result of the refine template program.
         """
-        # Adjust batch size if orientation search is disabled
-        if not self.orientation_refinement_config.enabled:
-            orientation_batch_size = 1
-        elif (
-            self.orientation_refinement_config.euler_angles_offsets.shape[0]
-            < orientation_batch_size
-        ):
-            orientation_batch_size = (
-                self.orientation_refinement_config.euler_angles_offsets.shape[0]
-            )
-
         result: dict[str, np.ndarray] = {}
         result = core_refine_template(
             batch_size=orientation_batch_size, **backend_kwargs
@@ -263,17 +315,18 @@ class RefineTemplateManager(BaseModel2DTM):
         result = {k: v.cpu().numpy() for k, v in result.items()}
         return result
 
-    def refine_result_to_dataframe(
-        self, output_dataframe_path: str, result: dict[str, np.ndarray]
-    ) -> None:
+    def results_to_snr(self, result: dict[str, np.ndarray]) -> float:
         """Convert refine template result to dataframe.
 
         Parameters
         ----------
-        output_dataframe_path : str
-            Path to save the refined particle data.
         result : dict[str, np.ndarray]
             The result of the refine template program.
+
+        Returns
+        -------
+        float
+            The mean SNR of the template.
         """
         df_refined = self.particle_stack._df.copy()
         refined_mip = result["refined_cross_correlation"]
@@ -281,84 +334,8 @@ class RefineTemplateManager(BaseModel2DTM):
         refined_scaled_mip = refined_scaled_mip / np.sqrt(
             df_refined["correlation_variance"]
         )
-
-        pos_offset_y = result["refined_pos_y"]
-        pos_offset_x = result["refined_pos_x"]
-        pos_offset_y_ang = pos_offset_y * df_refined["pixel_size"]
-        pos_offset_x_ang = pos_offset_x * df_refined["pixel_size"]
-
-        # Add the new columns to the DataFrame
-        df_refined["refined_mip"] = refined_mip
-        df_refined["refined_scaled_mip"] = refined_scaled_mip
-
-        df_refined["refined_psi"] = result["refined_euler_angles"][:, 2]
-        df_refined["refined_theta"] = result["refined_euler_angles"][:, 1]
-        df_refined["refined_phi"] = result["refined_euler_angles"][:, 0]
-
-        df_refined["refined_relative_defocus"] = (
-            result["refined_defocus_offset"] + df_refined["refined_relative_defocus"]
+        mean_snr = float(refined_scaled_mip.mean())
+        print(
+            f"max snr: {refined_scaled_mip.max()}, min snr: {refined_scaled_mip.min()}"
         )
-        df_refined["refined_pixel_size"] = (
-            result["refined_pixel_size_offset"] + df_refined["pixel_size"]
-        )
-        df_refined["refined_pos_y"] = pos_offset_y + df_refined["pos_y"]
-        df_refined["refined_pos_x"] = pos_offset_x + df_refined["pos_x"]
-        df_refined["refined_pos_y_img"] = pos_offset_y + df_refined["pos_y_img"]
-        df_refined["refined_pos_x_img"] = pos_offset_x + df_refined["pos_x_img"]
-        df_refined["refined_pos_y_img_angstrom"] = (
-            pos_offset_y_ang + df_refined["pos_y_img_angstrom"]
-        )
-        df_refined["refined_pos_x_img_angstrom"] = (
-            pos_offset_x_ang + df_refined["pos_x_img_angstrom"]
-        )
-
-        # Reorder the columns
-        df_refined = df_refined.reindex(columns=REFINED_DF_COLUMN_ORDER)
-
-        # Save the refined DataFrame to disk
-        df_refined.to_csv(output_dataframe_path)
-
-    # @classmethod
-    # def from_dataframe(cls, dataframe: pd.DataFrame) -> "RefineTemplateManager":
-    #     """Tabular data (from DataFrame) and create a RefineTemplateManager object."""
-    #     raise NotImplementedError("Method not implemented yet.")
-
-    # @classmethod
-    # def from_match_template_manager(
-    #     cls, mt_manager: MatchTemplateManager
-    # ) -> "RefineTemplateManager":
-    #     """Creates a RefineTemplateManager object from MatchTemplateManager object."""
-    #     raise NotImplementedError("Method not implemented yet.")
-
-    # def particles_to_dataframe(self) -> pd.DataFrame:
-    #     """Export refined particles as dataframe."""
-    #     raise NotImplementedError("Method not implemented yet.")
-
-    # def results_to_dataframe(self) -> pd.DataFrame:
-    #     """Export full results as dataframe."""
-    #     raise NotImplementedError("Method not implemented yet.")
-
-    # def particle_stack_to_dataframe(self) -> pd.DataFrame:
-    #     """Export particle stack information as dataframe."""
-    #     raise NotImplementedError("Method not implemented yet.")
-
-    # def save_particle_stack(self, save_dir: str) -> None:
-    #     """Save the particle stack to disk."""
-    #     raise NotImplementedError("Method not implemented yet.")
-
-    # @classmethod
-    # def from_results_csv(cls, results_csv_path: str) -> "RefineTemplateManager":
-    #     """Take tabular data (from csv) and create a RefineTemplateManager object.
-
-    #     Parameters
-    #     ----------
-    #     results_csv_path : str
-    #         Path to the CSV file containing the per-particle data.
-
-    #     Returns
-    #     -------
-    #     RefineTemplateManager
-    #     """
-    #     df = pd.read_csv(results_csv_path)
-
-    #     return cls.from_dataframe(df)
+        return mean_snr
